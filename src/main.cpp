@@ -57,7 +57,7 @@ int main() {
   double ref_vel = 0.0;
 
   h.onMessage([&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,
-               &map_waypoints_dx,&map_waypoints_dy]
+               &map_waypoints_dx,&map_waypoints_dy, &lane, &ref_vel]
               (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -98,7 +98,7 @@ int main() {
           int prev_size = previous_path_x.size();
 
           if(prev_size > 0){
-            car_s = end_path_s  
+            car_s = end_path_s;
 		  }
 
           bool too_close = false;
@@ -115,7 +115,7 @@ int main() {
 
                 check_car_s+=((double)prev_size*.02*check_speed);
                 //check s values f=greater than mine and s gap
-                if((check_car_s > car_s) && (check_car_s-car_s) < 30){
+                if((check_car_s > car_s) && ((check_car_s-car_s) < 30)){
                     //ref_vel = 29.5;     
                     too_close = true;
                     if(lane > 0){
@@ -131,7 +131,6 @@ int main() {
               ref_vel += .224;
 		  }
 
-          json msgJson;
 
           //Create a list of widely spaced (x,y) Waypoints, evenly spaced at 30m.
           vector<double> ptsx;
@@ -143,7 +142,7 @@ int main() {
           double ref_yaw = deg2rad(car_yaw);
 
           if(prev_size < 2){
-          //in theory this will only happen when the car is starting becaue it didn't plan anything before.
+          //in theory this will only happen when the car is starting because it didn't plan anything before.
             double prev_car_x = car_x - cos(car_yaw);
             double prev_car_y = car_y - sin(car_yaw);
 
@@ -167,14 +166,6 @@ int main() {
             ptsy.push_back(ref_y_prev);
             ptsy.push_back(ref_y);
 		  }
-
-          vector<double> next_x_vals;
-          vector<double> next_y_vals;
-
-          /**
-           * TODO: define a path made up of (x,y) points that the car will visit
-           *   sequentially every .02 seconds
-           */
 
           //In frenet add evenly 30m spaced points ahead of the starting reference
           vector<double> next_wp0 = getXY(car_s+30,(2+4*lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
@@ -242,6 +233,8 @@ int main() {
 
 		  }
 
+          json msgJson;
+          
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
 
