@@ -142,17 +142,71 @@ int main() {
            *   sequentially every .02 seconds
            */
 
-           double dist_inc = 0.3;
-           for (int i = 0; i < 50; ++i) {
-                
-             double next_s = car_s+(i+1)*dist_inc;
-             double next_d = 6;
-             vector<double> xy = getXY(next_s, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+          //In frenet add evenly 30m spaced points ahead of the starting reference
+          vector<double> next_wp0 = getXY(car_s+30,(2+4*lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
+          vector<double> next_wp1 = getXY(car_s+60,(2+4*lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
+          vector<double> next_wp2 = getXY(car_s+90,(2+4*lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
 
-             next_x_vals.push_back(xy[0]);
-             next_y_vals.push_back(xy[1]);
-           }
+          ptsx.push_back(next_wp0[0]);
+          ptsx.push_back(next_wp1[0]);
+          ptsx.push_back(next_wp2[0]);
 
+          ptsy.push_back(next_wp0[1]);
+          ptsy.push_back(next_wp1[1]);
+          ptsy.push_back(next_wp2[1]);
+
+          for(int i = 0; i < ptsx.size(); i++){
+            //shift car to local car coordinates and 0 degrees
+
+            double shift_x = ptsx[i]-ref_x;
+            double shift_y = ptsy[i]-ref_y;
+
+            ptsx[i] = (shift_x * cos(0-ref_yaw)-shift_y*sin(0-ref_yaw));
+            ptsy[i] = (shift_x * sin(0-ref_yaw)-shift_y*cos(0-ref_yaw));
+		  }
+
+          //create the spline for smoothing path motion
+          tk::spline s;
+
+          //set (x, y) points to the spline
+          s.set_points(ptsx, ptsy);
+
+          vector<double> next_x_vals;
+          vector<double> next_y_vals;
+
+          for(int i = 0; i < previous_path_x.size(); i++){
+            next_x_vals.push_back(previous_path_x[i]);
+            next_y_vals.push_back(previous_path_y[i]);
+		  }
+
+          double target_x = 30.0;
+          double target_y = s(target_x);
+          double target_dist = sqrt((target_x)*(target_x)+(target_y)*(target_y));
+
+          double x_add_on = 0;  
+
+          //fill the rest of the path planner
+          for (int i = 1; i<=50-previous_path_x.size(); i++){
+            double N = (target_dist/(.02*ref_vel/2.24));
+            double x_point = x_add_on+(target_x)/N;
+            double y_point = s(x_point);
+
+            x_add_on = x_point;
+
+            double x_ref = x_point;
+            double y_ref = y_point;
+
+            //rotate back to normal after rotation earlier
+            x_point = (x_ref *cos(ref_yaw)-y_ref * sin(ref_yaw));
+            y_point = (x_ref *sin(ref_yaw)+y_ref*cos(ref_yaw));
+
+            x_point += ref_x;
+            y_point += ref_y;
+
+            next_x_vals.push_back(x_point);
+            next_y_vals.push_back(y_point);
+
+		  }
 
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
