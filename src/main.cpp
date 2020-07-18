@@ -94,6 +94,9 @@ int main() {
           //   of the road.
           auto sensor_fusion = j[1]["sensor_fusion"];
 
+          vector<double> next_x_vals;
+          vector<double> next_y_vals;
+
           //previous path size of the car (last known points that he knew)
           int prev_size = previous_path_x.size();
 
@@ -187,7 +190,7 @@ int main() {
             double shift_y = ptsy[i]-ref_y;
 
             ptsx[i] = (shift_x * cos(0-ref_yaw)-shift_y*sin(0-ref_yaw));
-            ptsy[i] = (shift_x * sin(0-ref_yaw)-shift_y*cos(0-ref_yaw));
+            ptsy[i] = (shift_x * sin(0-ref_yaw)+shift_y*cos(0-ref_yaw));
 		  }
 
           //create the spline for smoothing path motion
@@ -196,9 +199,6 @@ int main() {
           //set (x, y) points to the spline
           s.set_points(ptsx, ptsy);
 
-          vector<double> next_x_vals;
-          vector<double> next_y_vals;
-
           for(int i = 0; i < previous_path_x.size(); i++){
             next_x_vals.push_back(previous_path_x[i]);
             next_y_vals.push_back(previous_path_y[i]);
@@ -206,14 +206,14 @@ int main() {
 
           double target_x = 30.0;
           double target_y = s(target_x);
-          double target_dist = sqrt((target_x)*(target_x)+(target_y)*(target_y));
+          double target_dist = sqrt((target_x*target_x)+(target_y*target_y));
 
           double x_add_on = 0;  
 
           //fill the rest of the path planner
           for (int i = 1; i<=50-previous_path_x.size(); i++){
             double N = (target_dist/(.02*ref_vel/2.24));
-            double x_point = x_add_on+(target_x)/N;
+            double x_point = x_add_on+target_x/N;
             double y_point = s(x_point);
 
             x_add_on = x_point;
