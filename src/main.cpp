@@ -51,7 +51,7 @@ int main() {
     map_waypoints_dy.push_back(d_y);
   }
 
-  //start in lane 1 for now
+  //start in lane 1
   int lane = 1;
 
   double ref_vel = 0.0;
@@ -104,7 +104,9 @@ int main() {
             car_s = end_path_s;
 		  }
 
-          bool too_close = false;
+          bool too_close_middle = false;
+          bool too_close_right = false;
+          bool too_close_left = false;
 
           //find ref_v to use
           for(int i = 0; i < sensor_fusion.size(); i++){
@@ -119,18 +121,40 @@ int main() {
                 check_car_s+=((double)prev_size*.02*check_speed);
                 //check s values f=greater than mine and s gap
                 if((check_car_s > car_s) && ((check_car_s-car_s) < 30)){
-                    //ref_vel = 29.5;     
-                    too_close = true;
-                    if(lane > 0){
-                        lane = 0;           
+                    //ref_vel = 29.5;
+                    if(lane == 2){
+                        //check if it's safe to turn left
+                        if(IsSafeToChangeLane(sensor_fusion, 1, car_s, prev_size)){
+                            lane = 1;
+						}else{
+                            too_close_right = true;
+						}
+                        //instead of lane = 1, check if we can turn left
+					}else if(lane == 1){
+                        //try to turn right first (a good driver should prefer stay on the right lane)
+                        if(IsSafeToChangeLane(sensor_fusion, 2, car_s, prev_size)){
+                            lane = 2;              
+						}else if (IsSafeToChangeLane(sensor_fusion, 0, car_s, prev_size)){
+                            lane = 0;
+						}else{
+                            too_close_middle = true;   
+						}
+                        // instead of lane = 0, check if we can turn left or if we can turn right instead
+					} else if(lane == 0){
+                        if(IsSafeToChangeLane(sensor_fusion, 1, car_s, prev_size)){
+                            lane = 1;
+						}else{
+                            too_close_left = true;  
+						}
 					}
 				}
 			}
 		  }
 
-          if(too_close){
+          if((too_close_middle && lane == 1) || (too_close_left && lane == 0) || (too_close_right && lane == 2)){
             ref_vel -= .224;  
-		  }else if(ref_vel < 49.5){
+		  }
+          else if(ref_vel < 49.5){
               ref_vel += .224;
 		  }
 
